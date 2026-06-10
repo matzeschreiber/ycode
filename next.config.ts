@@ -1,4 +1,9 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import type { NextConfig } from 'next';
+
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 const imageRemotePatterns: NonNullable<NonNullable<NextConfig['images']>['remotePatterns']> = [
   {
@@ -55,6 +60,7 @@ const nextConfig: NextConfig = {
   // Map unused database drivers to stub modules (we only use PostgreSQL)
   // This prevents Turbopack from trying to resolve packages that aren't installed
   turbopack: {
+    root: projectRoot,
     resolveAlias: {
       // Map unused database drivers to stub module to prevent resolution errors
       'oracledb': './lib/stubs/db-driver-stub.ts',
