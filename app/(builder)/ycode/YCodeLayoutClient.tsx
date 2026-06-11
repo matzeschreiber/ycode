@@ -71,8 +71,9 @@ function YCodeLayoutInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // For settings, localization, profile, forms, and integrations routes, pass children to YCodeBuilder so it can render them
-  if (routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations') {
+  // For settings, localization, profile, forms, bookings, and integrations routes,
+  // pass children to YCodeBuilder so it can render them
+  if (routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations') {
     return <YCodeBuilder>{children}</YCodeBuilder>;
   }
 
