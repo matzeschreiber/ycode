@@ -103,6 +103,7 @@ async function fetchBookingTimezone(formId: string, date: string): Promise<strin
 export default function BookingsPage() {
   const isDev = process.env.NODE_ENV !== 'production';
   const [formId, setFormId] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'booked' | 'canceled'>('all');
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [manualOpen, setManualOpen] = useState(false);
@@ -137,6 +138,19 @@ export default function BookingsPage() {
   }, []);
 
   const filtered = useMemo(() => bookings, [bookings]);
+  const visibleBookings = useMemo(() => {
+    if (statusFilter === 'all') return filtered;
+    return filtered.filter((booking) => booking.status === statusFilter);
+  }, [filtered, statusFilter]);
+  const stats = useMemo(() => {
+    const now = new Date();
+    return {
+      total: bookings.length,
+      booked: bookings.filter((booking) => booking.status === 'booked').length,
+      canceled: bookings.filter((booking) => booking.status === 'canceled').length,
+      upcoming: bookings.filter((booking) => booking.status === 'booked' && new Date(booking.start_at) > now).length,
+    };
+  }, [bookings]);
   const manualTargetFormId = (manualFormId.trim() || formId.trim());
 
   useEffect(() => {
@@ -272,8 +286,27 @@ export default function BookingsPage() {
         </div>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+          <div className="text-xs text-muted-foreground">Total</div>
+          <div className="mt-2 text-2xl font-semibold">{stats.total}</div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+          <div className="text-xs text-muted-foreground">Booked</div>
+          <div className="mt-2 text-2xl font-semibold">{stats.booked}</div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+          <div className="text-xs text-muted-foreground">Upcoming</div>
+          <div className="mt-2 text-2xl font-semibold">{stats.upcoming}</div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+          <div className="text-xs text-muted-foreground">Canceled</div>
+          <div className="mt-2 text-2xl font-semibold">{stats.canceled}</div>
+        </div>
+      </div>
+
       <div className="grid gap-4 rounded-xl border border-border/60 bg-background/70 p-4">
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex-1">
             <label className="mb-1 block text-xs text-muted-foreground">Filter by form ID</label>
             <Input
@@ -281,9 +314,29 @@ export default function BookingsPage() {
               placeholder="contact-form"
             />
           </div>
-          <Button variant="outline" onClick={loadBookings}>
-            Refresh
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={statusFilter === 'booked' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('booked')}
+            >
+              Booked
+            </Button>
+            <Button
+              variant={statusFilter === 'canceled' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('canceled')}
+            >
+              Canceled
+            </Button>
+            <Button variant="outline" onClick={loadBookings}>
+              Refresh
+            </Button>
+          </div>
         </div>
         {isDev && (
           <p className="text-xs text-muted-foreground">
@@ -340,41 +393,98 @@ export default function BookingsPage() {
             <Spinner />
           </div>
         ) : error ? (
-          <div className="p-6 text-sm text-red-500">{error}</div>
-        ) : filtered.length === 0 ? (
-          <div className="flex h-full items-center justify-center p-6">
-            <Empty>
-              <EmptyTitle>No bookings yet</EmptyTitle>
-              <EmptyDescription>Bookings created from the website will appear here.</EmptyDescription>
-            </Empty>
+          <div className="p-6">
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">
+              {error}
+            </div>
           </div>
-        ) : (
-          <div className="divide-y divide-border/60">
-            {filtered.map((booking) => (
-              <div key={booking.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={booking.status === 'booked' ? 'default' : 'secondary'}>
-                      {booking.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{booking.form_id}</span>
-                  </div>
-                  <div className="text-sm font-medium">
-                    {formatDate(booking.start_at, 'MMM D YYYY, HH:mm')} - {formatDate(booking.end_at, 'HH:mm')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {booking.customer_name || 'No name'}{booking.customer_email ? ` · ${booking.customer_email}` : ''}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {booking.status === 'booked' && (
-                    <Button variant="outline" onClick={() => setCancelTarget(booking)}>
-                      Cancel
+        ) : visibleBookings.length === 0 ? (
+          <div className="flex h-full items-center justify-center p-6">
+            <div className="w-full max-w-2xl rounded-2xl border border-dashed border-border/70 bg-muted/20 p-8 text-center">
+              <Empty>
+                <EmptyTitle>No bookings yet</EmptyTitle>
+                <EmptyDescription>
+                  Bookings created from the website will appear here. Add demo data to inspect the UI, or create the first manual booking.
+                </EmptyDescription>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <Button onClick={() => setManualOpen((prev) => !prev)}>
+                    <Icon name="plus" className="size-4" />
+                    Manual booking
+                  </Button>
+                  {isDev && (
+                    <Button
+                      variant="outline"
+                      onClick={handleSeedDemoBookings}
+                      disabled={demoLoading}
+                    >
+                      {demoLoading ? 'Seeding...' : 'Add demo bookings'}
                     </Button>
                   )}
                 </div>
-              </div>
-            ))}
+                <div className="pt-2 text-xs text-muted-foreground">
+                  {formId.trim()
+                    ? `Current filter: ${formId.trim()}`
+                    : 'No form filter set. Demo data will seed under demo-booking-form if you click the button.'}
+                </div>
+              </Empty>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border/60">
+                <thead className="bg-muted/30">
+                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">When</th>
+                    <th className="px-4 py-3 font-medium">Form</th>
+                    <th className="px-4 py-3 font-medium">Customer</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {visibleBookings.map((booking) => (
+                    <tr key={booking.id} className="align-top transition-colors hover:bg-muted/20">
+                      <td className="px-4 py-4">
+                        <div className="text-sm font-medium">
+                          {formatDate(booking.start_at, 'MMM D YYYY')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDate(booking.start_at, 'HH:mm')} - {formatDate(booking.end_at, 'HH:mm')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        <div className="font-medium">{booking.form_id}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {booking.metadata?.created_via === 'demo-seed' ? 'Demo booking' : 'Manual / website'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm">
+                        <div className="font-medium">{booking.customer_name || 'No name'}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {booking.customer_email || 'No email'}
+                          {booking.customer_phone ? ` · ${booking.customer_phone}` : ''}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant={booking.status === 'booked' ? 'default' : 'secondary'}>
+                          {booking.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          {booking.status === 'booked' && (
+                            <Button variant="outline" onClick={() => setCancelTarget(booking)}>
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
