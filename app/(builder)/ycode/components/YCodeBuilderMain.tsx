@@ -855,7 +855,7 @@ export default function YCodeBuilder({ children }: YCodeBuilderProps = {} as YCo
     // Ensure a currentPageId is set on non-design routes (CMS, Forms) so
     // preview can navigate to a page — default to homepage if unset
     if (!currentPageId && pages.length > 0) {
-      const isNonDesignRoute = routeType === 'collection' || routeType === 'collections-base' || routeType === 'forms';
+      const isNonDesignRoute = routeType === 'collection' || routeType === 'collections-base' || routeType === 'forms' || routeType === 'bookings';
       if (isNonDesignRoute) {
         const homePage = findHomepage(pages);
         const defaultPage = homePage || pages[0];
@@ -896,7 +896,27 @@ export default function YCodeBuilder({ children }: YCodeBuilderProps = {} as YCo
       // navigateToLayers will automatically include view=desktop, tab=design, layer=body
       navigateToLayers(defaultPage.id);
     }
-  }, [migrationsComplete, pages.length, components.length, collections.length, routeType, resourceId, currentPageId, editingComponentId, pages, components, collections, setCurrentPageId, setSelectedLayerId, navigateToLayers, navigateToCollection, navigateToCollections, urlState.layerId]);
+  }, [
+    migrationsComplete,
+    builderDataPreloaded,
+    pages.length,
+    components.length,
+    collections.length,
+    routeType,
+    resourceId,
+    currentPageId,
+    editingComponentId,
+    pages,
+    components,
+    collections,
+    setCurrentPageId,
+    setSelectedLayerId,
+    navigateToLayers,
+    navigateToCollection,
+    navigateToCollections,
+    urlState.layerId,
+    urlState.variantId,
+  ]);
 
   // Mirror the active component variant id into the URL while editing a
   // component, so reloads land back on the same variant. Uses
@@ -2164,99 +2184,99 @@ export default function YCodeBuilder({ children }: YCodeBuilderProps = {} as YCo
   // Authenticated - show builder (only after migrations AND data preload complete)
   return (
     <>
-      <div className="h-screen flex flex-col">
-      {/* Top Header Bar */}
-      <HeaderBar
-        user={user}
-        signOut={signOut}
-        showPageDropdown={showPageDropdown}
-        setShowPageDropdown={setShowPageDropdown}
-        currentPage={routeType === 'settings' || routeType === 'profile' || routeType === 'integrations' ? undefined : currentPage}
-        currentPageId={routeType === 'settings' || routeType === 'profile' || routeType === 'integrations' ? null : currentPageId}
-        pages={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? [] : pages}
-        setCurrentPageId={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? () => {} : setCurrentPageId}
-        isSaving={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? false : isCurrentlySaving}
-        hasUnsavedChanges={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? false : hasUnsavedChanges}
-        lastSaved={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? null : lastSaved}
-        isPublishing={isPublishing}
-        setIsPublishing={setIsPublishing}
-        saveImmediately={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? async () => {} : saveImmediately}
-        activeTab={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? 'pages' : activeTab}
-        onExitComponentEditMode={handleExitComponentEditMode}
-        onPublishSuccess={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations' ? () => {} : () => {
-          useCollectionsStore.getState().reloadCurrentItems();
-        }}
-        isSettingsRoute={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'integrations'}
-      />
+      <div className="flex h-screen flex-col">
+        {/* Top Header Bar */}
+        <HeaderBar
+          user={user}
+          signOut={signOut}
+          showPageDropdown={showPageDropdown}
+          setShowPageDropdown={setShowPageDropdown}
+          currentPage={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? undefined : currentPage}
+          currentPageId={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? null : currentPageId}
+          pages={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? [] : pages}
+          setCurrentPageId={routeType === 'settings' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? () => {} : setCurrentPageId}
+          isSaving={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? false : isCurrentlySaving}
+          hasUnsavedChanges={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? false : hasUnsavedChanges}
+          lastSaved={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? null : lastSaved}
+          isPublishing={isPublishing}
+          setIsPublishing={setIsPublishing}
+          saveImmediately={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? async () => {} : saveImmediately}
+          activeTab={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? 'pages' : activeTab}
+          onExitComponentEditMode={handleExitComponentEditMode}
+          onPublishSuccess={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations' ? () => {} : () => {
+            useCollectionsStore.getState().reloadCurrentItems();
+          }}
+          isSettingsRoute={routeType === 'settings' || routeType === 'localization' || routeType === 'profile' || routeType === 'forms' || routeType === 'bookings' || routeType === 'integrations'}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Settings Route - Render Settings Content */}
-        {routeType === 'settings' ? (
-          <SettingsContent>{children}</SettingsContent>
-        ) : routeType === 'localization' ? (
-          <LocalizationContent>{children}</LocalizationContent>
-        ) : routeType === 'profile' ? (
-          <ProfileContent>{children}</ProfileContent>
-        ) : routeType === 'forms' ? (
-          <>{children}</>
-        ) : routeType === 'integrations' ? (
-          <IntegrationsContent>{children}</IntegrationsContent>
-        ) : (
-          <>
-            {/* Left Sidebar - Pages & Layers
-                - Hidden in CMS mode
-                - For editor role: only shown when "Pages" tab is active */}
-            <div className={activeTab === 'cms' || (isEditor && activeTab !== 'pages') ? 'hidden' : 'contents'}>
-              <LeftSidebar
-                onLayerSelect={(layerId) => {
-                  setSelectedLayerId(layerId);
-                  if (isEditor) {
-                    useEditorStore.getState().setActiveSidebarTab('layers');
-                  }
-                }}
-                currentPageId={currentPageId}
-                onPageSelect={(pageId: string) => {
-                  setCurrentPageId(pageId);
-                  if (isEditor) {
-                    useEditorStore.getState().setActiveSidebarTab('layers');
-                  }
-                }}
-                liveLayerUpdates={liveLayerUpdates}
-                liveComponentUpdates={liveComponentUpdates}
-                readOnly={!canEditStructure}
-              />
-            </div>
-
-            {/* CMS View - kept mounted for instant switching */}
-            <div className={activeTab === 'cms' ? 'flex flex-1 min-w-0 overflow-hidden' : 'hidden'}>
-              <Suspense fallback={null}>
-                <CMS />
-              </Suspense>
-            </div>
-
-            {/* Design View - kept mounted for instant switching */}
-            <div className={activeTab !== 'cms' ? 'contents' : 'hidden'}>
-              {/* Center Canvas - Preview */}
-              <CenterCanvas
-                currentPageId={currentPageId}
-                viewportMode={viewportMode}
-                setViewportMode={setViewportMode}
-                onExitComponentEditMode={handleExitComponentEditMode}
-                liveLayerUpdates={liveLayerUpdates}
-                liveComponentUpdates={liveComponentUpdates}
-              />
-
-              {/* Right Sidebar - Properties (hidden for editor role) */}
-              {!isEditor && (
-                <RightSidebar
-                  onLayerUpdate={handleLayerUpdate}
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Settings Route - Render Settings Content */}
+          {routeType === 'settings' ? (
+            <SettingsContent>{children}</SettingsContent>
+          ) : routeType === 'localization' ? (
+            <LocalizationContent>{children}</LocalizationContent>
+          ) : routeType === 'profile' ? (
+            <ProfileContent>{children}</ProfileContent>
+          ) : routeType === 'forms' || routeType === 'bookings' ? (
+            <>{children}</>
+          ) : routeType === 'integrations' ? (
+            <IntegrationsContent>{children}</IntegrationsContent>
+          ) : (
+            <>
+              {/* Left Sidebar - Pages & Layers
+                  - Hidden in CMS mode
+                  - For editor role: only shown when "Pages" tab is active */}
+              <div className={activeTab === 'cms' || (isEditor && activeTab !== 'pages') ? 'hidden' : 'contents'}>
+                <LeftSidebar
+                  onLayerSelect={(layerId) => {
+                    setSelectedLayerId(layerId);
+                    if (isEditor) {
+                      useEditorStore.getState().setActiveSidebarTab('layers');
+                    }
+                  }}
+                  currentPageId={currentPageId}
+                  onPageSelect={(pageId: string) => {
+                    setCurrentPageId(pageId);
+                    if (isEditor) {
+                      useEditorStore.getState().setActiveSidebarTab('layers');
+                    }
+                  }}
+                  liveLayerUpdates={liveLayerUpdates}
+                  liveComponentUpdates={liveComponentUpdates}
+                  readOnly={!canEditStructure}
                 />
-              )}
-            </div>
-          </>
-        )}
-      </div>
+              </div>
+
+              {/* CMS View - kept mounted for instant switching */}
+              <div className={activeTab === 'cms' ? 'flex flex-1 min-w-0 overflow-hidden' : 'hidden'}>
+                <Suspense fallback={null}>
+                  <CMS />
+                </Suspense>
+              </div>
+
+              {/* Design View - kept mounted for instant switching */}
+              <div className={activeTab !== 'cms' ? 'contents' : 'hidden'}>
+                {/* Center Canvas - Preview */}
+                <CenterCanvas
+                  currentPageId={currentPageId}
+                  viewportMode={viewportMode}
+                  setViewportMode={setViewportMode}
+                  onExitComponentEditMode={handleExitComponentEditMode}
+                  liveLayerUpdates={liveLayerUpdates}
+                  liveComponentUpdates={liveComponentUpdates}
+                />
+
+                {/* Right Sidebar - Properties (hidden for editor role) */}
+                {!isEditor && (
+                  <RightSidebar
+                    onLayerUpdate={handleLayerUpdate}
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </div>
     </div>
 
     {/* Collection Item Sheet - renders globally (lazy loaded) */}
@@ -2278,7 +2298,7 @@ export default function YCodeBuilder({ children }: YCodeBuilderProps = {} as YCo
     )}
 
     {/* Collaboration: Realtime Cursors - scoped to context (tab + page/collection/component) */}
-    {user && cursorRoomName && routeType !== 'settings' && routeType !== 'localization' && routeType !== 'profile' && routeType !== 'integrations' && (
+    {user && cursorRoomName && routeType !== 'settings' && routeType !== 'localization' && routeType !== 'profile' && routeType !== 'integrations' && routeType !== 'bookings' && (
       <Suspense fallback={null}>
         <RealtimeCursors
           roomName={cursorRoomName}

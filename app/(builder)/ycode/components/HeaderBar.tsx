@@ -116,7 +116,7 @@ export default function HeaderBar({
   const { navigateToLayers, navigateToCollection, navigateToCollections, updateQueryParams, routeType } = useEditorUrl();
 
   // Optimistic nav button state - set immediately on click, cleared when URL catches up
-  type NavButton = 'design' | 'cms' | 'forms';
+  type NavButton = 'design' | 'cms' | 'forms' | 'bookings';
   const [optimisticNav, setOptimisticNav] = useState<NavButton | null>(null);
 
   // Clear optimistic state once the URL reflects the clicked route
@@ -125,11 +125,13 @@ export default function HeaderBar({
     const isDesignRoute = routeType === 'layers' || routeType === 'page' || routeType === 'component' || routeType === null;
     const isCmsRoute = routeType === 'collection' || routeType === 'collections-base';
     const isFormsRoute = routeType === 'forms';
+    const isBookingsRoute = routeType === 'bookings';
 
     if (
       (optimisticNav === 'design' && isDesignRoute) ||
       (optimisticNav === 'cms' && isCmsRoute) ||
-      (optimisticNav === 'forms' && isFormsRoute)
+      (optimisticNav === 'forms' && isFormsRoute) ||
+      (optimisticNav === 'bookings' && isBookingsRoute)
     ) {
       setOptimisticNav(null);
     }
@@ -150,6 +152,7 @@ export default function HeaderBar({
     if (optimisticNav) return optimisticNav;
     if (routeType === 'collection' || routeType === 'collections-base') return 'cms';
     if (routeType === 'forms') return 'forms';
+    if (routeType === 'bookings') return 'bookings';
     if (routeType === 'layers' || routeType === 'page' || routeType === 'component' || routeType === null) return 'design';
     return null;
   }, [optimisticNav, routeType]);
@@ -541,21 +544,38 @@ export default function HeaderBar({
             CMS
           </Button>
           {!isEditor && (
-            <Button
-              variant={activeNavButton === 'forms' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                const isDesignRoute = routeType === 'layers' || routeType === 'page' || routeType === 'component';
-                if (isDesignRoute) {
-                  setLastDesignUrl(window.location.pathname + window.location.search);
-                }
-                setOptimisticNav('forms');
-                router.push('/ycode/forms');
-              }}
-            >
-              <Icon name="form" />
-              Forms
-            </Button>
+            <>
+              <Button
+                variant={activeNavButton === 'forms' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  const isDesignRoute = routeType === 'layers' || routeType === 'page' || routeType === 'component';
+                  if (isDesignRoute) {
+                    setLastDesignUrl(window.location.pathname + window.location.search);
+                  }
+                  setOptimisticNav('forms');
+                  router.push('/ycode/forms');
+                }}
+              >
+                <Icon name="form" />
+                Forms
+              </Button>
+              <Button
+                variant={activeNavButton === 'bookings' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  const isDesignRoute = routeType === 'layers' || routeType === 'page' || routeType === 'component';
+                  if (isDesignRoute) {
+                    setLastDesignUrl(window.location.pathname + window.location.search);
+                  }
+                  setOptimisticNav('bookings');
+                  router.push('/ycode/bookings');
+                }}
+              >
+                <Icon name="calendar" />
+                Bookings
+              </Button>
+            </>
           )}
         </div>
       </div>

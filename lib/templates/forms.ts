@@ -420,6 +420,25 @@ export const formTemplates: Record<string, BlockTemplate> = {
     }
   },
 
+  booking_form: {
+    icon: 'calendar',
+    name: 'Booking form',
+    template: {
+      name: 'booking_form',
+      customName: 'Termin wählen',
+      classes: ['w-full'],
+      settings: {
+        id: 'booking-module'
+      },
+      design: {
+        sizing: {
+          isActive: true,
+          width: '100%'
+        }
+      }
+    }
+  },
+
   input: {
     icon: 'input',
     name: 'Input',

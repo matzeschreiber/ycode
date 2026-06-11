@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { resolveInlineVariablesFromData } from '@/lib/inline-variables';
 import { renderRichText, hasBlockElementsWithInlineVariables, getTextStyleClasses, flattenTiptapParagraphs, type RichTextLinkContext, type RenderComponentBlockFn } from '@/lib/text-format-utils';
 import { hasComponentOrVariable } from '@/lib/tiptap-utils';
+import { cn } from '@/lib/utils';
 import LayerContextMenu from '@/app/(builder)/ycode/components/LayerContextMenu';
 import CanvasTextEditor from '@/app/(builder)/ycode/components/CanvasTextEditor';
 import { useComponentsStore } from '@/stores/useComponentsStore';
@@ -43,6 +44,7 @@ import { clsx } from 'clsx';
 import PaginatedCollection from '@/components/PaginatedCollection';
 import LoadMoreCollection from '@/components/LoadMoreCollection';
 import FilterableCollection from '@/components/FilterableCollection';
+import BookingForm from '@/components/BookingForm';
 import LocaleSelector from '@/components/layers/LocaleSelector';
 import { usePagesStore } from '@/stores/usePagesStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -74,6 +76,13 @@ function buildAnchorMap(layers: Layer[]): Record<string, string> {
 
   traverse(layers);
   return map;
+}
+
+function hasBookingFormChild(layers?: Layer[]): boolean {
+  return layers?.some((layer) => {
+    if (layer.name === 'booking_form') return true;
+    return hasBookingFormChild(layer.children);
+  }) ?? false;
 }
 
 interface LayerRendererProps {
@@ -112,6 +121,7 @@ interface LayerRendererProps {
   isInsideForm?: boolean; // Whether this layer is inside a form (for button type handling)
   isInsideLink?: boolean; // Whether this layer is inside an ancestor <a> (prevents nested <a> tags)
   parentFormSettings?: FormSettings; // Form settings from parent form layer
+  parentFormId?: string; // ID of the nearest parent form layer
   pages?: any[]; // Pages for link resolution
   folders?: any[]; // Folders for link resolution
   collectionItemSlugs?: Record<string, string>; // Maps collection_item_id -> slug value for link resolution
@@ -177,6 +187,7 @@ const LayerRenderer: React.FC<LayerRendererProps> = ({
   isInsideForm = false,
   isInsideLink = false,
   parentFormSettings,
+  parentFormId,
   pages: pagesProp,
   folders: foldersProp,
   isPreview = false,
@@ -281,6 +292,18 @@ const LayerRenderer: React.FC<LayerRendererProps> = ({
       }
 
       return renderedChildren;
+    }
+
+    if (layer.name === 'booking_form') {
+      return (
+        <div key={layer.id} className={cn(getClassesString(layer), 'w-full')}>
+          <BookingForm
+            formId={parentFormId || layer.settings?.id || layer.id}
+            settings={parentFormSettings?.booking}
+            isPreview={isPreview}
+          />
+        </div>
+      );
     }
 
     return (
@@ -394,6 +417,7 @@ const LayerItemImpl: React.FC<{
   isInsideForm?: boolean; // Whether this layer is inside a form
   isInsideLink?: boolean; // Whether this layer is inside an ancestor <a>
   parentFormSettings?: FormSettings; // Form settings from parent form layer
+  parentFormId?: string; // ID of the nearest parent form layer
   pages?: any[]; // Pages for link resolution
   folders?: any[]; // Folders for link resolution
   collectionItemSlugs?: Record<string, string>; // Maps collection_item_id -> slug value for link resolution
@@ -449,6 +473,7 @@ const LayerItemImpl: React.FC<{
   isInsideForm = false,
   isInsideLink = false,
   parentFormSettings,
+  parentFormId,
   pages,
   folders,
   collectionItemSlugs,
@@ -2567,6 +2592,7 @@ const LayerItemImpl: React.FC<{
     if (htmlTag === 'form' && !isEditMode) {
       const formId = layer.settings?.id;
       const formSettings = layer.settings?.form;
+      const isBookingForm = formSettings?.form_type === 'booking';
 
       elementProps.onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -2633,6 +2659,76 @@ const LayerItemImpl: React.FC<{
             payload[checkbox.name] = 'false';
           }
         });
+
+        if (isBookingForm) {
+          const bookingStartAt = String(payload.booking_start_at || '');
+          const bookingEndAt = String(payload.booking_end_at || '');
+
+          if (!bookingStartAt || !bookingEndAt) {
+            const errorAlert = form.querySelector('[data-alert-type="error"]') as HTMLElement | null;
+            const successAlert = form.querySelector('[data-alert-type="success"]') as HTMLElement | null;
+            if (errorAlert) errorAlert.style.display = '';
+            if (successAlert) successAlert.style.display = 'none';
+            return;
+          }
+
+          const sanitizedPayload = { ...payload };
+          delete sanitizedPayload.booking_form_id;
+          delete sanitizedPayload.booking_date;
+          delete sanitizedPayload.booking_start_at;
+          delete sanitizedPayload.booking_end_at;
+          delete sanitizedPayload.booking_timezone;
+
+          const pickField = (...keys: string[]) => {
+            for (const key of keys) {
+              const value = sanitizedPayload[key];
+              if (typeof value === 'string' && value.trim()) return value;
+            }
+            return undefined;
+          };
+
+          try {
+            const response = await fetch('/ycode/api/bookings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                form_id: formId || 'unnamed-form',
+                start_at: bookingStartAt,
+                end_at: bookingEndAt,
+                payload: sanitizedPayload,
+                metadata: {
+                  page_url: typeof window !== 'undefined' ? window.location.href : undefined,
+                },
+                customer_name: pickField('name', 'full_name', 'firstname', 'first_name'),
+                customer_email: pickField('email', 'e-mail', 'mail'),
+                customer_phone: pickField('phone', 'telephone', 'mobile'),
+                preview: isPreview,
+              }),
+            });
+
+            const result = await response.json();
+            const errorAlert = form.querySelector('[data-alert-type="error"]') as HTMLElement | null;
+            const successAlert = form.querySelector('[data-alert-type="success"]') as HTMLElement | null;
+
+            if (errorAlert) errorAlert.style.display = 'none';
+            if (successAlert) successAlert.style.display = 'none';
+
+            if (response.ok) {
+              if (successAlert) {
+                successAlert.style.display = '';
+              }
+              form.reset();
+            } else {
+              console.error('Booking submission failed:', result);
+              if (errorAlert) errorAlert.style.display = '';
+            }
+          } catch (error) {
+            console.error('Booking submission error:', error);
+            const errorAlert = form.querySelector('[data-alert-type="error"]') as HTMLElement | null;
+            if (errorAlert) errorAlert.style.display = '';
+          }
+          return;
+        }
 
         try {
           const response = await fetch('/ycode/api/form-submissions', {
@@ -3352,6 +3448,7 @@ const LayerItemImpl: React.FC<{
                     isInsideForm={isInsideForm || htmlTag === 'form'}
                     isInsideLink={isInsideLink || htmlTag === 'a'}
                     parentFormSettings={htmlTag === 'form' ? layer.settings?.form : parentFormSettings}
+                    parentFormId={htmlTag === 'form' ? (layer.settings?.id || layer.id) : parentFormId}
                     pages={pages}
                     folders={folders}
                     collectionItemSlugs={collectionItemSlugs}
@@ -3431,6 +3528,7 @@ const LayerItemImpl: React.FC<{
               isInsideForm={isInsideForm || htmlTag === 'form'}
               isInsideLink={isInsideLink || htmlTag === 'a'}
               parentFormSettings={htmlTag === 'form' ? layer.settings?.form : parentFormSettings}
+              parentFormId={htmlTag === 'form' ? (layer.settings?.id || layer.id) : parentFormId}
               components={componentsProp}
               ancestorComponentIds={effectiveAncestorIds}
               serverSettings={serverSettings}
@@ -3463,6 +3561,20 @@ const LayerItemImpl: React.FC<{
         )}
 
         {textContent && textContent}
+        {layer.name === 'booking_form' && (
+          <BookingForm
+            formId={parentFormId || layer.settings?.id || layer.id}
+            settings={parentFormSettings?.booking}
+            isPreview={isPreview}
+          />
+        )}
+        {layer.name === 'form' && layer.settings?.form?.form_type === 'booking' && !hasBookingFormChild(effectiveChildren) && (
+          <BookingForm
+            formId={layer.settings?.id || layer.id}
+            settings={layer.settings?.form?.booking}
+            isPreview={isPreview}
+          />
+        )}
 
         {/* Render children */}
         {effectiveChildren && effectiveChildren.length > 0 && (
@@ -3500,6 +3612,7 @@ const LayerItemImpl: React.FC<{
             isInsideForm={isInsideForm || htmlTag === 'form'}
             isInsideLink={isInsideLink || htmlTag === 'a'}
             parentFormSettings={htmlTag === 'form' ? layer.settings?.form : parentFormSettings}
+            parentFormId={htmlTag === 'form' ? (layer.settings?.id || layer.id) : parentFormId}
             pages={pages}
             folders={folders}
             collectionItemSlugs={collectionItemSlugs}

@@ -168,7 +168,44 @@ export interface DesignProperties {
   transitions?: TransitionsDesign;
 }
 
-export type FormType = 'standard' | 'password_protected';
+export type FormType = 'standard' | 'password_protected' | 'booking';
+
+export type BookingWeekday =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
+
+export interface BookingDailyHours {
+  enabled?: boolean;
+  start?: string;
+  end?: string;
+}
+
+export interface BookingBlockedRange {
+  start_at: string;
+  end_at: string;
+  title?: string;
+  kind?: 'vacation' | 'lunch' | 'holiday' | 'custom';
+  all_day?: boolean;
+}
+
+export interface BookingSettings {
+  timezone?: string;
+  duration_minutes?: number;
+  buffer_before_minutes?: number;
+  buffer_after_minutes?: number;
+  slot_interval_minutes?: number;
+  booking_window_days?: number;
+  min_notice_minutes?: number;
+  lunch_break?: BookingDailyHours;
+  weekly_hours?: Partial<Record<BookingWeekday, BookingDailyHours>>;
+  blocked_dates?: string[];
+  blocked_ranges?: BookingBlockedRange[];
+}
 
 export type PasswordProtectionContext = {
   pageId?: string;
@@ -181,6 +218,7 @@ export interface FormSettings {
   // 'password_protected' wires the form to the page-auth verify endpoint and gates access to
   // password-protected pages; 'standard' (default) submits to /ycode/api/form-submissions.
   form_type?: FormType;
+  booking?: BookingSettings;
   success_action?: 'message' | 'redirect'; // What happens on successful submission (default: 'message')
   success_message?: string; // Message shown on successful submission (deprecated - now uses alert child)
   error_message?: string; // Message shown on failed submission (deprecated - now uses alert child)

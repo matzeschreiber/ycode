@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -45,7 +44,6 @@ import { toast } from 'sonner';
 import { ASSET_CATEGORIES } from '@/lib/asset-constants';
 
 export default function GeneralSettingsPage() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState('website');
   const { getSettingByKey, saveSettings } = useSettingsStore();
 
@@ -305,7 +303,7 @@ export default function GeneralSettingsPage() {
       setIsResetting(false);
       setShowResetDialog(false);
     }
-  }, [router]);
+  }, []);
 
   return (
     <div className="p-8">

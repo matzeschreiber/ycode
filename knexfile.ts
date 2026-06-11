@@ -1,8 +1,8 @@
 import type { Knex } from 'knex';
+import fs from 'fs';
 import path from 'path';
-import { credentials } from './lib/credentials.ts';
+import dns from 'dns/promises';
 import { parseSupabaseConfig } from './lib/supabase-config-parser.ts';
-import type { SupabaseConfig } from './types/index.ts';
 
 /**
  * Knex Configuration for Ycode Supabase Migrations
@@ -12,27 +12,80 @@ import type { SupabaseConfig } from './types/index.ts';
  */
 
 /**
- * Load Supabase credentials from centralized storage
- * Uses environment variables on Vercel, file-based storage locally
+ * Load key=value pairs from local env files into process.env.
+ * This keeps the migration CLI independent from Next.js runtime-only modules.
  */
-async function getSupabaseConnectionParams() {
-  const config = await credentials.get<SupabaseConfig>('supabase_config');
+function loadEnvFile(fileName: string) {
+  const envPath = path.join(process.cwd(), fileName);
 
-  if (!config?.connectionUrl || !config?.dbPassword) {
-    throw new Error('Supabase not configured. Please run setup first.');
+  if (!fs.existsSync(envPath)) return;
+
+  const lines = fs.readFileSync(envPath, 'utf-8').split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const idx = trimmed.indexOf('=');
+    if (idx === -1) continue;
+
+    const key = trimmed.slice(0, idx).trim();
+    const value = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+function loadLocalEnv() {
+  loadEnvFile('.env.local');
+  loadEnvFile('.env');
+}
+
+function getSupabaseConnectionParams() {
+  loadLocalEnv();
+
+  const connectionUrl = process.env.SUPABASE_CONNECTION_URL;
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  const supabaseUrl = process.env.SUPABASE_URL;
+
+  if (!connectionUrl || !dbPassword) {
+    throw new Error(
+      'Supabase not configured for migrations.\n' +
+      'Set SUPABASE_CONNECTION_URL and SUPABASE_DB_PASSWORD in .env.local or your shell.'
+    );
   }
 
-  const connectionParams = parseSupabaseConfig(config);
-  const isSelfHosted = !!config.supabaseUrl;
+  const parsed = parseSupabaseConfig({
+    anonKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    connectionUrl,
+    dbPassword,
+    supabaseUrl,
+  });
 
   return {
-    host: connectionParams.dbHost,
-    port: connectionParams.dbPort,
-    database: connectionParams.dbName,
-    user: connectionParams.dbUser,
-    password: connectionParams.dbPassword,
-    ssl: isSelfHosted ? false : { rejectUnauthorized: false },
+    host: parsed.dbHost,
+    port: parsed.dbPort,
+    database: parsed.dbName,
+    user: parsed.dbUser,
+    password: parsed.dbPassword,
+    ssl: supabaseUrl ? false : { rejectUnauthorized: false },
   };
+}
+
+async function ensureDatabaseHostResolves(host: string) {
+  try {
+    await dns.lookup(host);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Cannot resolve Supabase host "${host}".\n` +
+      'Check your network/DNS or replace SUPABASE_CONNECTION_URL with a direct Postgres URL.\n' +
+      `DNS error: ${message}`
+    );
+  }
 }
 
 const createConfig = (): Knex.Config => {
@@ -42,6 +95,7 @@ const createConfig = (): Knex.Config => {
     client: 'pg',
     connection: async () => {
       const connectionParams = await getSupabaseConnectionParams();
+      await ensureDatabaseHostResolves(connectionParams.host);
 
       return connectionParams;
     },
@@ -60,7 +114,9 @@ const createConfig = (): Knex.Config => {
       createRetryIntervalMillis: 200,
     } : {
       min: 0,
-      max: 3,
+      max: 1,
+      acquireTimeoutMillis: 10000,
+      createTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
     },
   };

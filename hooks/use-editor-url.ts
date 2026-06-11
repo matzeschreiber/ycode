@@ -39,7 +39,7 @@ export function updateUrlQueryParam(key: string, value: string | null | undefine
  * Handles routing for pages, collections, and components with semantic routes
  */
 
-export type EditorRouteType = 'page' | 'layers' | 'collection' | 'collections-base' | 'component' | 'settings' | 'localization' | 'profile' | 'forms' | 'integrations' | null;
+export type EditorRouteType = 'page' | 'layers' | 'collection' | 'collections-base' | 'component' | 'settings' | 'localization' | 'profile' | 'forms' | 'bookings' | 'integrations' | null;
 export type PageSettingsTab = 'general' | 'seo' | 'custom-code';
 export type EditorTab = 'layers' | 'pages' | 'cms';
 
@@ -192,6 +192,17 @@ export function useEditorUrl() {
         tab: null,
         page: null,
         sidebarTab: 'pages', // Forms uses pages sidebar for now
+      };
+    }
+
+    const bookingsMatch = pathname?.match(/^\/ycode\/bookings(?:\/([^/]+))?$/);
+    if (bookingsMatch) {
+      return {
+        type: 'bookings',
+        resourceId: bookingsMatch[1] || null,
+        tab: null,
+        page: null,
+        sidebarTab: 'pages',
       };
     }
 

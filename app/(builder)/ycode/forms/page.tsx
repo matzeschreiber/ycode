@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -421,14 +422,25 @@ export default function FormsPage() {
     <div className="w-64 shrink-0 bg-background border-r flex flex-col overflow-hidden px-4">
       <header className="py-5 flex items-center justify-between shrink-0">
         <span className="font-medium">Forms</span>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={handleRefresh}
-          disabled={isLoading}
-        >
-          <Icon name="refresh" className={cn('size-3', isLoading && 'animate-spin')} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="xs"
+            asChild
+          >
+            <Link href="/ycode/bookings">
+              <Icon name="calendar" className="size-3" />
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <Icon name="refresh" className={cn('size-3', isLoading && 'animate-spin')} />
+          </Button>
+        </div>
       </header>
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="flex flex-col">
