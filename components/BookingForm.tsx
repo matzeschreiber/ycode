@@ -42,8 +42,6 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
-  const durationMinutes = settings?.duration_minutes || 50;
-
   useEffect(() => {
     setDate(getTodayInTimeZone(timeZone));
   }, [timeZone]);
@@ -112,13 +110,21 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
     if (error) return error;
     if (loading) return 'Verfügbare Termine werden geladen ...';
     if (slots.length === 0) return 'Für diesen Tag sind aktuell keine freien Termine verfügbar.';
-    return `Dauer: ${durationMinutes} Minuten`;
-  }, [durationMinutes, error, loading, slots.length]);
+    return '';
+  }, [error, loading, slots.length]);
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-4 rounded-lg border border-border/60 bg-background/60 p-4">
-      <div className="grid gap-2">
-        <Label htmlFor={`${formId}-booking-date`}>Termin wählen</Label>
+    <div
+      ref={containerRef}
+      className="flex flex-col gap-3"
+    >
+      <div className="flex flex-col gap-1.5">
+        <Label
+          htmlFor={`${formId}-booking-date`}
+          variant="muted"
+        >
+          Termin wählen
+        </Label>
         <Input
           id={`${formId}-booking-date`}
           type="date"
@@ -130,15 +136,22 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
         />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="text-xs text-muted-foreground">{helperText}</div>
+      <div className="flex flex-col gap-1.5">
+        {helperText ? (
+          <div className="text-xs leading-5 text-muted-foreground">
+            {helperText}
+          </div>
+        ) : null}
+        {slots.length > 0 ? (
+          <Label variant="muted">Verfügbare Termine</Label>
+        ) : null}
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Spinner />
             Slots laden
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {slots.map((slot) => {
               const active = selectedSlot?.start_at === slot.start_at;
               return (
@@ -146,7 +159,8 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
                   key={slot.start_at}
                   type="button"
                   variant={active ? 'default' : 'outline'}
-                  className={cn('justify-center text-xs', active && 'shadow-sm')}
+                  size="sm"
+                  className={cn('w-full justify-center text-center', active && 'shadow-sm')}
                   onClick={() => setSelectedSlot(slot)}
                 >
                   {slot.label}

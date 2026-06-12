@@ -96,6 +96,7 @@
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.13",
     "pg": "^8.16.3",
+    "playwright": "^1.60.0",
     "prismjs": "^1.30.0",
     "radix-ui": "^1.4.3",
     "react": "19.1.0",

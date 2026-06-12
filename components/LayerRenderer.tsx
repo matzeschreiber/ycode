@@ -294,18 +294,6 @@ const LayerRenderer: React.FC<LayerRendererProps> = ({
       return renderedChildren;
     }
 
-    if (layer.name === 'booking_form') {
-      return (
-        <div key={layer.id} className={cn(getClassesString(layer), 'w-full')}>
-          <BookingForm
-            formId={parentFormId || layer.settings?.id || layer.id}
-            settings={parentFormSettings?.booking}
-            isPreview={isPreview}
-          />
-        </div>
-      );
-    }
-
     return (
       <LayerItem
         key={(layer as Layer & { _bulletKey?: string })._bulletKey || layer.id}

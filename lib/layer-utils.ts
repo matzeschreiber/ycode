@@ -1248,7 +1248,7 @@ export function canHaveChildren(layer: Layer, childLayerType?: string): boolean 
     'icon', 'image', 'audio', 'video', 'iframe',
     'heading', 'text', 'richText', 'span', 'label', 'hr',
     'input', 'textarea', 'select', 'checkbox', 'radio',
-    'htmlEmbed', 'map',
+    'htmlEmbed', 'map', 'booking_form',
   ];
 
   // Sections cannot contain other sections
