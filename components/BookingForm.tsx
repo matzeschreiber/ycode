@@ -70,12 +70,25 @@ function addDays(date: string, days: number): string {
   return toCalendarDateString(next);
 }
 
+function isDateInWeeklyHours(date: string, settings?: BookingSettings): boolean {
+  const weeklyHours = settings?.weekly_hours;
+  if (!weeklyHours) return true;
+
+  const dayIndex = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const weekdayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+  const weekday = weekdayMap[dayIndex];
+  const daySettings = weeklyHours[weekday];
+
+  return Boolean(daySettings?.enabled);
+}
+
 function getMonthGrid(
   viewMonth: string,
   selectedDate: string,
   todayDate: string,
   minDate: string,
-  maxDate: string
+  maxDate: string,
+  settings?: BookingSettings
 ): CalendarCell[] {
   const { year, month } = parseDateString(`${viewMonth}-01`);
   const firstDayUtc = new Date(Date.UTC(year, month - 1, 1));
@@ -92,7 +105,7 @@ function getMonthGrid(
       inCurrentMonth: date.getUTCMonth() === month - 1,
       isToday: dateKey === todayDate,
       isSelected: dateKey === selectedDate,
-      isDisabled: dateKey < minDate || dateKey > maxDate,
+      isDisabled: dateKey < minDate || dateKey > maxDate || !isDateInWeeklyHours(dateKey, settings),
     });
   }
 
@@ -203,10 +216,9 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
     [viewMonth]
   );
   const calendarDays = useMemo(
-    () => getMonthGrid(viewMonth, date, today, minSelectableDate, maxSelectableDate),
-    [date, maxSelectableDate, minSelectableDate, today, viewMonth]
+    () => getMonthGrid(viewMonth, date, today, minSelectableDate, maxSelectableDate, settings),
+    [date, maxSelectableDate, minSelectableDate, settings, today, viewMonth]
   );
-  const todayDisabled = today < minSelectableDate || today > maxSelectableDate;
 
   const helperText = useMemo(() => {
     if (error) return error;
@@ -248,14 +260,7 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
               className="w-full justify-between rounded-[6px] border border-solid border-[#737373]/[0.15] bg-[#d4d4d4]/10 px-[16px] py-[16px] text-left text-[14px] leading-[24px] tracking-[0px] text-[color:var(--0233fdb1-5ec4-4903-9251-1318fc85d18b)] font-[Inter] shadow-none transition-colors hover:bg-[#d4d4d4]/15 hover:border-[#737373]/20 focus-visible:bg-[#d4d4d4]/15 focus-visible:border-[#737373]/20"
               aria-label="Datum wählen"
             >
-              <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Datum
-                </span>
-                <span className="truncate text-[14px] leading-[24px]">
-                  {selectedDateLabel}
-                </span>
-              </span>
+              <span className="truncate text-[14px] leading-[24px]">{selectedDateLabel}</span>
               <Icon name="calendar" className="size-4 shrink-0 opacity-70" />
             </Button>
           </PopoverTrigger>
@@ -342,27 +347,9 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
                     setViewMonth(getMonthKey(today));
                     setCalendarOpen(false);
                   }}
-                  disabled={todayDisabled}
                 >
                   Heute
                 </Button>
-                <div className="text-xs text-muted-foreground">
-                  {todayDisabled ? 'Heute liegt außerhalb des Buchungsfensters.' : 'Heute verfügbar.'}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-[#02121a]" />
-                  Ausgewählt
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full border border-[#737373]/40 bg-transparent" />
-                  Heute
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-muted-foreground/25" />
-                  Gesperrt
-                </div>
               </div>
             </div>
           </PopoverContent>
@@ -406,14 +393,7 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
                   aria-pressed={active}
                   onClick={() => setSelectedSlot(slot)}
                 >
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span className="truncate">{slot.label}</span>
-                    {active ? (
-                      <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white">
-                        Ausgewählt
-                      </span>
-                    ) : null}
-                  </span>
+                  <span className="truncate">{slot.label}</span>
                 </Button>
               );
             })}
