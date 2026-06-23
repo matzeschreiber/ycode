@@ -61,6 +61,17 @@ function isPublicApiRoute(pathname: string, method: string): boolean {
     return true;
   }
 
+  // Public booking flow:
+  // - availability lookup happens while visitors pick a date
+  // - booking creation happens when they submit the booking form
+  if (pathname === '/ycode/api/bookings/availability' && method === 'GET') {
+    return true;
+  }
+
+  if (pathname === '/ycode/api/bookings' && method === 'POST') {
+    return true;
+  }
+
   if (PUBLIC_API_EXACT.includes(pathname)) return true;
 
   if (PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
