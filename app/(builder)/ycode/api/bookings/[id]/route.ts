@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { cancelBooking } from '@/lib/repositories/bookingRepository';
+import { sendBookingCancellationEmail } from '@/lib/services/resendService';
 import { getKnexClient } from '@/lib/knex-client';
 import { noCache } from '@/lib/api-response';
 
@@ -39,6 +40,24 @@ export async function PATCH(
 
     if (body.status === 'canceled' || body.status === 'cancelled') {
       const booking = await cancelBooking(id, body.cancellation_reason, body.canceled_by);
+      if (booking.customer_email) {
+        const pageUrl = typeof booking.metadata?.page_url === 'string' ? booking.metadata.page_url : undefined;
+        await sendBookingCancellationEmail(booking.customer_email, {
+          formId: booking.form_id,
+          booking: {
+            id: booking.id,
+            start_at: booking.start_at,
+            end_at: booking.end_at,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            payload: booking.payload || {},
+            metadata: booking.metadata || {},
+          },
+          pageUrl,
+          cancellationReason: booking.cancellation_reason,
+        });
+      }
       return noCache({ data: booking });
     }
 

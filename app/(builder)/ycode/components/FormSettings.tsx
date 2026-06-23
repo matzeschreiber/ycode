@@ -173,6 +173,7 @@ export default function FormSettings({ layer, onLayerUpdate }: FormSettingsProps
 
   const bookingSettings = formSettings.booking || {};
   const bookingType = formSettings.form_type === 'booking';
+  const canConfigureEmailNotification = bookingType || isSmtpEnabled;
 
   const hasBookingModule = layer?.children?.some((child) => child.name === 'booking_form') ?? false;
 
@@ -572,13 +573,13 @@ export default function FormSettings({ layer, onLayerUpdate }: FormSettingsProps
       isOpen={emailOpen}
       onToggle={() => setEmailOpen(!emailOpen)}
     >
-      {!isSmtpEnabled && isSmtpEnabled !== null && (
+      {!canConfigureEmailNotification && isSmtpEnabled !== null && (
         <div className="text-xs text-muted-foreground text-center py-4">
           Configure <Link href="/ycode/settings/email" className="underline hover:text-foreground">Email in Settings</Link> to use email notifications.
         </div>
       )}
 
-      {isSmtpEnabled && (
+      {canConfigureEmailNotification && (
         <>
           <div className="grid grid-cols-3">
             <Label variant="muted">Send to</Label>

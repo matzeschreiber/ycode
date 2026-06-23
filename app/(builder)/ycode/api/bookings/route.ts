@@ -1,5 +1,11 @@
 import { NextRequest } from 'next/server';
 import { createBooking, listBookings } from '@/lib/repositories/bookingRepository';
+import {
+  generateBookingEmailHtml,
+  generateBookingEmailText,
+  sendBookingConfirmationEmail,
+  sendResendEmail,
+} from '@/lib/services/resendService';
 import { noCache } from '@/lib/api-response';
 
 export const dynamic = 'force-dynamic';
@@ -43,6 +49,71 @@ export async function POST(request: NextRequest) {
       customer_email: body.customer_email || null,
       customer_phone: body.customer_phone || null,
     }, body.preview ? false : true);
+
+    const emailNotification = body.email;
+    const recipient = emailNotification?.to || process.env.RESEND_TO_EMAIL || process.env.RESEND_TO;
+    const hasExplicitNotification = Boolean(emailNotification?.enabled && emailNotification?.to);
+    const hasFallbackNotification = Boolean(!emailNotification?.to && (process.env.RESEND_TO_EMAIL || process.env.RESEND_TO));
+
+    if (!body.preview && recipient && (hasExplicitNotification || hasFallbackNotification)) {
+      const replyTo = typeof body.customer_email === 'string' && body.customer_email.trim()
+        ? body.customer_email.trim()
+        : undefined;
+      const subject = emailNotification?.subject || `New booking received: ${body.form_id}`;
+
+      await sendResendEmail({
+        to: recipient,
+        subject,
+        text: generateBookingEmailText({
+          formId: body.form_id,
+          booking: {
+            id: booking.id,
+            start_at: booking.start_at,
+            end_at: booking.end_at,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            payload: body.payload || {},
+            metadata: body.metadata || {},
+          },
+          pageUrl: typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined,
+        }),
+        html: generateBookingEmailHtml({
+          formId: body.form_id,
+          booking: {
+            id: booking.id,
+            start_at: booking.start_at,
+            end_at: booking.end_at,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            payload: body.payload || {},
+            metadata: body.metadata || {},
+          },
+          pageUrl: typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined,
+        }),
+        replyTo,
+      });
+    }
+
+    if (!body.preview && typeof booking.customer_email === 'string' && booking.customer_email.trim()) {
+      const pageUrl = typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined;
+      await sendBookingConfirmationEmail(booking.customer_email.trim(), {
+        formId: body.form_id,
+        booking: {
+          id: booking.id,
+          start_at: booking.start_at,
+          end_at: booking.end_at,
+          customer_name: booking.customer_name,
+          customer_email: booking.customer_email,
+          customer_phone: booking.customer_phone,
+          payload: body.payload || {},
+          metadata: body.metadata || {},
+        },
+        pageUrl,
+        message: body.email?.confirmation_message || undefined,
+      });
+    }
 
     return noCache({ data: booking }, 201);
   } catch (error) {

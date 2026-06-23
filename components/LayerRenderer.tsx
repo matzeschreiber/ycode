@@ -2690,6 +2690,7 @@ const LayerItemImpl: React.FC<{
                 customer_name: pickField('name', 'full_name', 'firstname', 'first_name'),
                 customer_email: pickField('email', 'e-mail', 'mail'),
                 customer_phone: pickField('phone', 'telephone', 'mobile'),
+                email: formSettings?.email_notification,
                 preview: isPreview,
               }),
             });
