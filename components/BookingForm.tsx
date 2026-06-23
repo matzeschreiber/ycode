@@ -257,7 +257,7 @@ export default function BookingForm({ formId, settings, isPreview = false }: Boo
             <Button
               type="button"
               variant="outline"
-              className="w-full justify-between rounded-[6px] border border-solid border-[#737373]/[0.15] bg-[#d4d4d4]/10 px-[16px] py-[16px] text-left text-[14px] leading-[24px] tracking-[0px] text-[color:var(--0233fdb1-5ec4-4903-9251-1318fc85d18b)] font-[Inter] shadow-none transition-colors hover:bg-[#d4d4d4]/15 hover:border-[#737373]/20 focus-visible:bg-[#d4d4d4]/15 focus-visible:border-[#737373]/20"
+              className="w-full h-[51px] justify-between rounded-[6px] border border-solid border-[#737373]/[0.15] bg-[#d4d4d4]/10 px-[16px] text-left text-[14px] leading-[24px] tracking-[0px] text-[color:var(--0233fdb1-5ec4-4903-9251-1318fc85d18b)] font-[Inter] shadow-none transition-colors hover:bg-[#d4d4d4]/15 hover:border-[#737373]/20 focus-visible:bg-[#d4d4d4]/15 focus-visible:border-[#737373]/20"
               aria-label="Datum wählen"
             >
               <span className="truncate text-[14px] leading-[24px]">{selectedDateLabel}</span>
