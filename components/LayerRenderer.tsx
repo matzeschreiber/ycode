@@ -2716,6 +2716,26 @@ const LayerItemImpl: React.FC<{
             return undefined;
           };
 
+          const pickEmailField = () => {
+            const explicitEmail = pickField('email', 'e-mail', 'mail');
+            if (explicitEmail) return explicitEmail;
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            for (const [key, value] of Object.entries(sanitizedPayload)) {
+              if (!/email/i.test(key) || typeof value !== 'string') continue;
+              const trimmed = value.trim();
+              if (trimmed && emailRegex.test(trimmed)) return trimmed;
+            }
+
+            for (const value of Object.values(sanitizedPayload)) {
+              if (typeof value !== 'string') continue;
+              const trimmed = value.trim();
+              if (trimmed && emailRegex.test(trimmed)) return trimmed;
+            }
+
+            return undefined;
+          };
+
           try {
             const response = await fetch('/ycode/api/bookings', {
               method: 'POST',
@@ -2729,7 +2749,7 @@ const LayerItemImpl: React.FC<{
                   page_url: typeof window !== 'undefined' ? window.location.href : undefined,
                 },
                 customer_name: pickField('name', 'full_name', 'firstname', 'first_name'),
-                customer_email: pickField('email', 'e-mail', 'mail'),
+                customer_email: pickEmailField(),
                 customer_phone: pickField('phone', 'telephone', 'mobile'),
                 email: formSettings?.email_notification,
                 preview: isPreview,
