@@ -39,6 +39,7 @@ import { useCollectionsStore } from '@/stores/useCollectionsStore';
 import { useAssetsStore } from '@/stores/useAssetsStore';
 import { useColorVariablesStore } from '@/stores/useColorVariablesStore';
 import { ShimmerSkeleton } from '@/components/ui/shimmer-skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { combineBgValues, mergeStaticBgVars } from '@/lib/tailwind-class-mapper';
 import { clsx } from 'clsx';
 import PaginatedCollection from '@/components/PaginatedCollection';
@@ -2586,6 +2587,46 @@ const LayerItemImpl: React.FC<{
         e.preventDefault();
 
         const form = e.currentTarget;
+        if (form.dataset.submitting === 'true') return;
+        form.dataset.submitting = 'true';
+        const submitButtons = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')) as Array<HTMLButtonElement | HTMLInputElement>;
+        submitButtons.forEach((button) => {
+          button.dataset.prevDisabled = button.disabled ? 'true' : 'false';
+          button.dataset.prevLabel = button.tagName === 'INPUT'
+            ? (button as HTMLInputElement).value
+            : button.textContent || '';
+          button.disabled = true;
+          if (button.tagName === 'INPUT') {
+            (button as HTMLInputElement).value = 'Submitting...';
+          } else {
+            const wrapper = document.createElement('span');
+            wrapper.className = 'inline-flex items-center justify-center gap-2';
+            const spinner = document.createElement('span');
+            spinner.className = 'inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-80';
+            spinner.setAttribute('aria-hidden', 'true');
+            const label = document.createElement('span');
+            label.textContent = 'Submitting...';
+            wrapper.append(spinner, label);
+            button.textContent = '';
+            button.append(wrapper);
+          }
+        });
+        const releaseSubmitLock = () => {
+          form.dataset.submitting = 'false';
+          submitButtons.forEach((button) => {
+            button.disabled = button.dataset.prevDisabled === 'true';
+            const prevLabel = button.dataset.prevLabel;
+            if (prevLabel !== undefined) {
+              if (button.tagName === 'INPUT') {
+                (button as HTMLInputElement).value = prevLabel;
+              } else {
+                button.textContent = prevLabel;
+              }
+            }
+            delete button.dataset.prevDisabled;
+            delete button.dataset.prevLabel;
+          });
+        };
         const formData = new FormData(form);
         const payload: Record<string, any> = {};
 
@@ -2703,18 +2744,41 @@ const LayerItemImpl: React.FC<{
             if (successAlert) successAlert.style.display = 'none';
 
             if (response.ok) {
+              const successAction = formSettings?.success_action || 'message';
+
+              if (successAction === 'redirect' && formSettings?.redirect_url) {
+                const redirectHref = generateLinkHref(formSettings.redirect_url, {
+                  pages,
+                  folders,
+                  collectionItemSlugs,
+                  isPreview,
+                  locale: currentLocale,
+                  translations,
+                  getAsset,
+                  anchorMap,
+                  resolvedAssets,
+                });
+                if (redirectHref) {
+                  window.location.href = redirectHref;
+                  return;
+                }
+              }
+
               if (successAlert) {
                 successAlert.style.display = '';
               }
               form.reset();
+              releaseSubmitLock();
             } else {
               console.error('Booking submission failed:', result);
               if (errorAlert) errorAlert.style.display = '';
+              releaseSubmitLock();
             }
           } catch (error) {
             console.error('Booking submission error:', error);
             const errorAlert = form.querySelector('[data-alert-type="error"]') as HTMLElement | null;
             if (errorAlert) errorAlert.style.display = '';
+            releaseSubmitLock();
           }
           return;
         }
@@ -2762,6 +2826,7 @@ const LayerItemImpl: React.FC<{
               });
               if (redirectHref) {
                 window.location.href = redirectHref;
+                return;
               }
             } else {
               // Show success alert
@@ -2771,11 +2836,13 @@ const LayerItemImpl: React.FC<{
             }
             // Reset the form
             form.reset();
+            releaseSubmitLock();
           } else {
             // Error handling - show error alert
             if (errorAlert) {
               errorAlert.style.display = '';
             }
+            releaseSubmitLock();
           }
         } catch (error) {
           console.error('Form submission error:', error);
@@ -2784,6 +2851,7 @@ const LayerItemImpl: React.FC<{
           if (errorAlert) {
             errorAlert.style.display = '';
           }
+          releaseSubmitLock();
         }
       };
     }
