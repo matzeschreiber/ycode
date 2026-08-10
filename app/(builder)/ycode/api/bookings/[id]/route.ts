@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { cancelBooking } from '@/lib/repositories/bookingRepository';
-import { sendBookingCancellationEmail } from '@/lib/services/resendService';
+import { sendBookingCancellationEmail } from '@/lib/services/emailService';
 import { getKnexClient } from '@/lib/knex-client';
 import { noCache } from '@/lib/api-response';
 

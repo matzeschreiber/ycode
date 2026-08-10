@@ -1,11 +1,9 @@
 import { NextRequest } from 'next/server';
 import { createBooking, listBookings } from '@/lib/repositories/bookingRepository';
 import {
-  generateBookingEmailHtml,
-  generateBookingEmailText,
   sendBookingConfirmationEmail,
-  sendResendEmail,
-} from '@/lib/services/resendService';
+  sendBookingNotificationEmail,
+} from '@/lib/services/emailService';
 import { noCache } from '@/lib/api-response';
 
 export const dynamic = 'force-dynamic';
@@ -51,49 +49,30 @@ export async function POST(request: NextRequest) {
     }, body.preview ? false : true);
 
     const emailNotification = body.email;
-    const recipient = emailNotification?.to || process.env.RESEND_TO_EMAIL || process.env.RESEND_TO;
+    const recipient = emailNotification?.to;
     const hasExplicitNotification = Boolean(emailNotification?.enabled && emailNotification?.to);
-    const hasFallbackNotification = Boolean(!emailNotification?.to && (process.env.RESEND_TO_EMAIL || process.env.RESEND_TO));
 
-    if (!body.preview && recipient && (hasExplicitNotification || hasFallbackNotification)) {
+    if (!body.preview && recipient && hasExplicitNotification) {
       const replyTo = typeof body.customer_email === 'string' && body.customer_email.trim()
         ? body.customer_email.trim()
         : undefined;
       const subject = emailNotification?.subject || `New booking received: ${body.form_id}`;
+      const bookingEmailData = {
+        formId: body.form_id,
+        booking: {
+          id: booking.id,
+          start_at: booking.start_at,
+          end_at: booking.end_at,
+          customer_name: booking.customer_name,
+          customer_email: booking.customer_email,
+          customer_phone: booking.customer_phone,
+          payload: body.payload || {},
+          metadata: body.metadata || {},
+        },
+        pageUrl: typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined,
+      };
 
-      await sendResendEmail({
-        to: recipient,
-        subject,
-        text: generateBookingEmailText({
-          formId: body.form_id,
-          booking: {
-            id: booking.id,
-            start_at: booking.start_at,
-            end_at: booking.end_at,
-            customer_name: booking.customer_name,
-            customer_email: booking.customer_email,
-            customer_phone: booking.customer_phone,
-            payload: body.payload || {},
-            metadata: body.metadata || {},
-          },
-          pageUrl: typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined,
-        }),
-        html: generateBookingEmailHtml({
-          formId: body.form_id,
-          booking: {
-            id: booking.id,
-            start_at: booking.start_at,
-            end_at: booking.end_at,
-            customer_name: booking.customer_name,
-            customer_email: booking.customer_email,
-            customer_phone: booking.customer_phone,
-            payload: body.payload || {},
-            metadata: body.metadata || {},
-          },
-          pageUrl: typeof body.metadata?.page_url === 'string' ? body.metadata.page_url : undefined,
-        }),
-        replyTo,
-      });
+      await sendBookingNotificationEmail(recipient, subject, bookingEmailData, replyTo);
     }
 
     if (!body.preview && typeof booking.customer_email === 'string' && booking.customer_email.trim()) {
